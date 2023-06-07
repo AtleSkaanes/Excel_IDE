@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using Microsoft.VisualBasic;
 using static System.Net.WebRequestMethods;
 
 
@@ -21,7 +22,9 @@ namespace Excel_IDE
 
         private void runButton_Click(object sender, RibbonControlEventArgs e)
         {
-            Globals.ThisAddIn.SaveAllSheets(true);
+            // Save and run
+            Globals.ThisAddIn.SaveAllSheets();
+            Globals.ThisAddIn.RunSheets();
         }
 
         private void saveBtn_Click(object sender, RibbonControlEventArgs e)
@@ -30,7 +33,7 @@ namespace Excel_IDE
             {
                 string newDir = Globals.ThisAddIn.OpenFileDialog();
             }
-            Globals.ThisAddIn.SaveAllSheets(false);
+            Globals.ThisAddIn.SaveAllSheets();
         }
 
         private void openBtn_Click(object sender, RibbonControlEventArgs e)
@@ -42,6 +45,15 @@ namespace Excel_IDE
 
         private void importBtn_Click(object sender, RibbonControlEventArgs e)
         {
+            if (!Globals.ThisAddIn.hasPythonIntepreter)
+                return;
+
+            string input = Globals.ThisAddIn.Application.InputBox("Write package name", "Import package", "");
+
+            if (input == "" || input == " ")
+                return;
+
+            Excel_IDE.cmd.RunCmd(Globals.ThisAddIn.pipPath + " install " + input, true);
 
         }
 

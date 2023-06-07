@@ -28,12 +28,22 @@ namespace Excel_IDE
 
         // Python Intepreter
         public bool hasPythonIntepreter = false;
-        public string pythonPath = null;
+        static public string pythonPath = null;
+        public string pipPath = null;
+        public string scriptPath = null;
         public string pythonVersion = null;
+
+        // Syntax hightligting
+        public Dictionary<Excel.Worksheet, string[]> variables = new Dictionary<Excel.Worksheet, string[]>();
+        public Dictionary<Excel.Worksheet, string[]> functions = new Dictionary<Excel.Worksheet, string[]>();
+        public Dictionary<Excel.Worksheet, string[]> classes = new Dictionary<Excel.Worksheet, string[]>();
+        public Dictionary<Excel.Worksheet, string[]> imports = new Dictionary<Excel.Worksheet, string[]>();
+        public List<string> keywords = new List<string>();
 
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
+            // Checks if the current directory has a venv
             CheckVenv();
         }
 
@@ -41,40 +51,43 @@ namespace Excel_IDE
         {
         }
 
-        public void SaveAllSheets(bool run)
+        public void SaveAllSheets()
         {
             if (!hasDir)
                 OpenFileDialog();
 
+            // Saves each sheet as a file in the dir
             foreach (Excel.Worksheet displayWorksheet in this.Application.Worksheets)
             {
                 string sheetName = displayWorksheet.Name;
+                // Remove invalid charachters from the sheetname
                 sheetName = CheckTitleSymbols(sheetName);
 
+                // Keep the output sheet from being saved
                 if (sheetName == "Output")
                     continue;
 
                 string fileContent = GetTextFromWorkSheet(displayWorksheet);
                 WriteToFile(sheetName + ".py", fileContent);
             }
+        }
 
-            if (run)
-            {
-                Excel.Worksheet currentWorksheet = this.Application.ActiveSheet;
+        public void RunSheets()
+        {
+            Excel.Worksheet currentWorksheet = this.Application.ActiveSheet;
 
-                string currentSheetName = currentWorksheet.Name;
-                currentSheetName = CheckTitleSymbols(currentSheetName);
+            string currentSheetName = currentWorksheet.Name;
+            currentSheetName = CheckTitleSymbols(currentSheetName);
 
-                RunPy(currentDir, currentSheetName + ".py");
-            }
+            cmd.RunPy(currentDir, currentSheetName + ".py");
         }
 
         string GetTextFromWorkSheet(Excel.Worksheet worksheet)
         {
             string fullText = "";
 
-            // https://www.youtube.com/watch?v=H0wlndQUJiU
-
+            // src for code segment: https://www.youtube.com/watch?v=H0wlndQUJiU
+            // Get all text from a sheet, and return as a string
             Range usedRange = worksheet.UsedRange;
 
             if (usedRange.Rows.Count > 0)
@@ -93,6 +106,7 @@ namespace Excel_IDE
                 }
             }
 
+            // Turn smart quotes into normal quotes and other stuff
             fullText = CheckBodySymbols(fullText);
             return fullText;
         }
@@ -161,40 +175,7 @@ namespace Excel_IDE
             }
         }
 
-        private void RunPy(string dirPath, string fileName)
-        {
-            if (!Directory.Exists(dirPath))
-            {
-                Output.Error.NullDir();
-                return;
-            }
-
-            // Go to the file's directory
-            string cdCmd = "cd " + dirPath;
-            string runCmd = pythonPath+" "+fileName;
-            string clearCmd = "cls";
-
-            Process p = new Process();
-            ProcessStartInfo info = new ProcessStartInfo();
-            info.FileName = "cmd.exe";
-            info.RedirectStandardInput = true;
-            info.RedirectStandardOutput = true;
-            info.CreateNoWindow = true;
-            info.UseShellExecute = false;
-
-            p.StartInfo = info;
-            p.Start();
-
-            p.StandardInput.WriteLine(cdCmd);
-            p.StandardInput.WriteLine(clearCmd);
-            p.StandardInput.WriteLine(runCmd);
-            p.StandardInput.Flush();
-            p.StandardInput.Close();
-            p.WaitForExit();
-
-            string outputStr = p.StandardOutput.ReadToEnd();
-            Output.WriteConsoleOutput(outputStr);
-        }
+        
 
         public string OpenFileDialog()
         {
@@ -272,77 +253,77 @@ namespace Excel_IDE
         {
             // CREATE VENV
             string venvCmd = "python -m venv " + currentDir + "\\venv";
-            Process p1 = new Process();
-            ProcessStartInfo info1 = new ProcessStartInfo();
-            info1.FileName = "cmd.exe";
-            info1.RedirectStandardInput = true;
-            info1.RedirectStandardOutput = true;
-            info1.CreateNoWindow = true;
-            info1.UseShellExecute = false;
+            cmd.RunCmd(venvCmd, true);
+            //Process p1 = new Process();
+            //ProcessStartInfo info1 = new ProcessStartInfo();
+            //info1.FileName = "cmd.exe";
+            //info1.RedirectStandardInput = true;
+            //info1.RedirectStandardOutput = true;
+            //info1.CreateNoWindow = true;
+            //info1.UseShellExecute = false;
 
-            p1.StartInfo = info1;
-            p1.Start();
+            //p1.StartInfo = info1;
+            //p1.Start();
 
-            p1.StandardInput.WriteLine(venvCmd);
-            p1.StandardInput.Flush();
-            p1.StandardInput.Close();
-            p1.WaitForExit();
-            if (p1.ExitCode == 0)
-                Output.WriteLine("Succesfully created python intepreter");
+            //p1.StandardInput.WriteLine(venvCmd);
+            //p1.StandardInput.Flush();
+            //p1.StandardInput.Close();
+            //p1.WaitForExit();
+            //if (p1.ExitCode == 0)
+            //    Output.WriteLine("Succesfully created python intepreter");
 
-            Output.WriteString(p1.StandardOutput.ReadToEnd());
+            //Output.WriteString(p1.StandardOutput.ReadToEnd());
 
 
             pythonPath = currentDir + "\\venv\\Scripts\\python";
+            pipPath = currentDir + "\\venv\\Scripts\\pip";
+            scriptPath = currentDir + "\\venv\\Scripts";
 
             // ACTIVATE THE VENV
-            string activateCmd = currentDir + "\\venv\\Scripts\\activate --versíon";
-            Process p2 = new Process();
-            ProcessStartInfo info2 = new ProcessStartInfo();
-            info2.FileName = "cmd.exe";
-            info2.RedirectStandardInput = true;
-            info2.RedirectStandardOutput = true;
-            info2.CreateNoWindow = true;
-            info2.UseShellExecute = false;
+            string activateCmd = scriptPath+"\\activate --versíon";
+            cmd.RunCmd(activateCmd, true);
 
-            p2.StartInfo = info2;
-            p2.Start();
+            //Process p2 = new Process();
+            //ProcessStartInfo info2 = new ProcessStartInfo();
+            //info2.FileName = "cmd.exe";
+            //info2.RedirectStandardInput = true;
+            //info2.RedirectStandardOutput = true;
+            //info2.CreateNoWindow = true;
+            //info2.UseShellExecute = false;
 
-            p2.StandardInput.WriteLine(activateCmd);
-            p2.StandardInput.Flush();
-            p2.StandardInput.Close();
-            p2.WaitForExit();
+            //p2.StartInfo = info2;
+            //p2.Start();
 
-            if (p2.ExitCode == 0)
-                Output.WriteLine("Activated python interpreter");
+            //p2.StandardInput.WriteLine(activateCmd);
+            //p2.StandardInput.Flush();
+            //p2.StandardInput.Close();
+            //p2.WaitForExit();
+
+            //if (p2.ExitCode == 0)
+            //    Output.WriteLine("Activated python interpreter");
 
 
             // GET THE VERSION
             string verCmd = pythonPath + " --versíon";
+            cmd.RunCmd(verCmd, true);
 
-            Process p3 = new Process();
-            ProcessStartInfo info3 = new ProcessStartInfo();
-            info3.FileName = "cmd.exe";
-            info3.RedirectStandardInput = true;
-            info3.RedirectStandardOutput = true;
-            info3.CreateNoWindow = true;
-            info3.UseShellExecute = false;
+            //Process p3 = new Process();
+            //ProcessStartInfo info3 = new ProcessStartInfo();
+            //info3.FileName = "cmd.exe";
+            //info3.RedirectStandardInput = true;
+            //info3.RedirectStandardOutput = true;
+            //info3.CreateNoWindow = true;
+            //info3.UseShellExecute = false;
 
-            p3.StartInfo = info3;
-            p3.Start();
+            //p3.StartInfo = info3;
+            //p3.Start();
 
-            p3.StandardInput.WriteLine(verCmd);
-            p3.StandardInput.Flush();
-            p3.StandardInput.Close();
-            p3.WaitForExit();
+            //p3.StandardInput.WriteLine(verCmd);
+            //p3.StandardInput.Flush();
+            //p3.StandardInput.Close();
+            //p3.WaitForExit();
 
-            pythonVersion = p3.StandardOutput.ReadToEnd().Replace("\r", "").Split('\n')[4];
-            Output.WriteLine("Running: "+pythonVersion);
-
-            hasPythonIntepreter = true;
-
-            Globals.Ribbons.Ribbon1.PythonIntBtn.Label = pythonVersion;
-            Globals.Ribbons.Ribbon1.PythonIntBtn.Enabled = false;
+            CheckVenv();
         }
 
         public bool CheckVenv()
@@ -352,14 +333,40 @@ namespace Excel_IDE
             {
                 hasPythonIntepreter = true;
                 pythonPath = currentDir + "\\venv\\Scripts\\python";
+                pipPath = currentDir + "\\venv\\Scripts\\pip";
+                scriptPath = currentDir + "\\venv\\Scripts";
 
-                Globals.Ribbons.Ribbon1.PythonIntBtn.Label = pythonVersion;
+                Globals.Ribbons.Ribbon1.PythonIntBtn.Visible = false;
                 Globals.Ribbons.Ribbon1.PythonIntBtn.Enabled = false;
                 Globals.Ribbons.Ribbon1.runButton.Enabled = true;
+                Globals.Ribbons.Ribbon1.importBtn.Enabled = true;
                 hasVenv = true;
             }
+            else
+            {
+                hasPythonIntepreter = false;
+                pythonPath = null;
+
+                Globals.Ribbons.Ribbon1.PythonIntBtn.Visible = true;
+                Globals.Ribbons.Ribbon1.PythonIntBtn.Enabled = true;
+                Globals.Ribbons.Ribbon1.runButton.Enabled = false;
+                Globals.Ribbons.Ribbon1.importBtn.Enabled = false;
+                hasVenv = false;
+            }
+
 
             return hasVenv;
+        }
+
+        
+
+
+        public void SyntaxHightligt(Excel.Worksheet sheet, int r, int c)
+        {
+            string cellText = sheet.Cells[r, c].value;
+
+
+
         }
 
         #region VSTO generated code
@@ -376,99 +383,102 @@ namespace Excel_IDE
         
         #endregion
     }
-}
 
-public static class Output
-{
-    public static Excel.Worksheet outputSheet = null;
-    private static int currentLine = 1;
-
-    private static void CreateOutputWorkSheet()
+    public static class cmd
     {
-        if (outputSheet == null)
+        public static void RunCmd(string cmd, bool writeToOutput)
         {
-            // Create Output sheet
-            Excel.Worksheet output;
-            output = (Excel.Worksheet)Globals.ThisAddIn.Application.Worksheets.Add();
-            output.Name = "Output";
-            outputSheet = output;
-        }
-    }
-    public static void WriteLine(string text)
-    {
-        CreateOutputWorkSheet();
+            Output.WipeOutput();
+            Output.outputSheet.Activate();
+            Output.WriteLine("Running command: "+cmd);
 
-        outputSheet.Cells[currentLine, 1].Value = text;
-        currentLine++;
-    }
+            Process p = new Process();
+            ProcessStartInfo info = new ProcessStartInfo();
+            info.FileName = "cmd.exe";
+            info.RedirectStandardInput = true;
+            info.RedirectStandardOutput = true;
+            info.RedirectStandardError = true;
+            info.CreateNoWindow = true;
+            info.UseShellExecute = false;
 
-    public static void WriteConsoleOutput(string text)
-    {
-        CreateOutputWorkSheet();
-        WipeOutput();
+            p.OutputDataReceived += (a, b) => Output.WriteLine(b.Data);
+            p.ErrorDataReceived += (a, b) => Output.WriteLine(b.Data);
 
-        string[] outputLines = text.Replace("\r", "").Split('\n');
+            p.StartInfo = info;
+            p.Start();
 
-        for (int i = 8; i < outputLines.Length - 2; i++)
-        {
-            WriteLine(outputLines[i]);
-        }
-    }
+            
 
-    public static void WriteString(string text)
-    {
-        CreateOutputWorkSheet();
-        WipeOutput();
-
-        string[] outputLines = text.Replace("\r", "").Split('\n');
-
-        for (int i = 0; i < outputLines.Length; i++)
-        {
-            WriteLine(outputLines[i]);
-        }
-    }
-
-    public static void WriteArray(string[] array)
-    {
-        CreateOutputWorkSheet();
-        WipeOutput();
-
-        for (int i = 0; i < array.Length; i++)
-        {
-            WriteLine(array[i]);
-        }
-    }
-
-    public static void WipeOutput()
-    {
-
-        if (outputSheet == null || outputSheet.UsedRange == null)
-            return;
-
-
-        Range usedRange = outputSheet.UsedRange;
-
-
-        if (usedRange.Rows.Count > 0)
-        {
-            for (int irow = 1; irow <= usedRange.Rows.Count; irow++)
+            p.StandardInput.WriteLine(cmd);
+            while (!p.HasExited)
             {
-                outputSheet.Cells[irow, 1].value = "";
+                if (writeToOutput)
+                {
+                    p.BeginErrorReadLine();
+                    p.BeginOutputReadLine();
+                }
             }
+            
+            p.StandardInput.Flush();
+            p.StandardInput.Close();
+
+            //if (writeToOutput) Output.WriteLine(p.StandardOutput.ReadToEnd());
+            //if (writeToOutput) Output.WriteLine(p.StandardError.ReadToEnd());
+
+            p.WaitForExit();
+
+            //if (writeToOutput) Output.WriteConsoleOutput(p);
+            //return p.ExitCode;
         }
 
-        currentLine = 1;
-    }
-
-
-    public static class Error
-    {
-        private static void ThrowError(string error)
+        public static void RunPy(string dirPath, string fileName)
         {
-            WriteLine(error);
-            outputSheet.Cells[currentLine, 1].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
-        }
-        public static void NullDir() { ThrowError("NullDir: Directory doesn't exist"); }
+            Output.WipeOutput();
+            Output.outputSheet.Activate();
+            Output.WriteLine("Running file \"" + fileName +"\"");
 
+
+            if (!Directory.Exists(dirPath))
+            {
+                Output.Error.NullDir();
+            }
+
+            // Go to the file's directory
+            string cdCmd = "cd " + dirPath;
+            string runCmd = ThisAddIn.pythonPath + " " + fileName;
+            string clearCmd = "cls";
+
+            Process p = new Process();
+            ProcessStartInfo info = new ProcessStartInfo();
+            info.FileName = "cmd.exe";
+            info.RedirectStandardInput = true;
+            info.RedirectStandardOutput = true;
+            info.RedirectStandardError = true;
+            info.CreateNoWindow = true;
+            info.UseShellExecute = false;
+
+            p.OutputDataReceived += (a, b) => Output.WriteLine(b.Data);
+            p.ErrorDataReceived += (a, b) => Output.WriteLine(b.Data);
+
+            p.StartInfo = info;
+            p.Start();
+
+            p.StandardInput.WriteLine(cdCmd);
+            p.StandardInput.WriteLine(clearCmd);
+            p.StandardInput.WriteLine(runCmd);
+
+            while (!p.HasExited)
+            {
+                p.BeginErrorReadLine();
+                p.BeginOutputReadLine();
+            }
+
+            p.StandardInput.Flush();
+            p.StandardInput.Close();
+            p.WaitForExit();
+        }
     }
+
+    
 }
+

@@ -36,11 +36,11 @@
         {
             this.tab1 = this.Factory.CreateRibbonTab();
             this.group1 = this.Factory.CreateRibbonGroup();
-            this.group2 = this.Factory.CreateRibbonGroup();
-            this.group3 = this.Factory.CreateRibbonGroup();
             this.runButton = this.Factory.CreateRibbonButton();
+            this.group2 = this.Factory.CreateRibbonGroup();
             this.saveBtn = this.Factory.CreateRibbonButton();
             this.openBtn = this.Factory.CreateRibbonButton();
+            this.group3 = this.Factory.CreateRibbonGroup();
             this.importBtn = this.Factory.CreateRibbonButton();
             this.PythonIntBtn = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
@@ -64,20 +64,6 @@
             this.group1.Label = "Run";
             this.group1.Name = "group1";
             // 
-            // group2
-            // 
-            this.group2.Items.Add(this.saveBtn);
-            this.group2.Items.Add(this.openBtn);
-            this.group2.Label = "Files";
-            this.group2.Name = "group2";
-            // 
-            // group3
-            // 
-            this.group3.Items.Add(this.importBtn);
-            this.group3.Items.Add(this.PythonIntBtn);
-            this.group3.Label = "Python";
-            this.group3.Name = "group3";
-            // 
             // runButton
             // 
             this.runButton.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
@@ -91,6 +77,13 @@
             this.runButton.SuperTip = "But don\'t do it if you have bugs :)";
             this.runButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.runButton_Click);
             // 
+            // group2
+            // 
+            this.group2.Items.Add(this.saveBtn);
+            this.group2.Items.Add(this.openBtn);
+            this.group2.Label = "Files";
+            this.group2.Name = "group2";
+            // 
             // saveBtn
             // 
             this.saveBtn.Label = "Save files";
@@ -103,8 +96,16 @@
             this.openBtn.Name = "openBtn";
             this.openBtn.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.openBtn_Click);
             // 
+            // group3
+            // 
+            this.group3.Items.Add(this.importBtn);
+            this.group3.Items.Add(this.PythonIntBtn);
+            this.group3.Label = "Python";
+            this.group3.Name = "group3";
+            // 
             // importBtn
             // 
+            this.importBtn.Enabled = false;
             this.importBtn.Label = "Add Package";
             this.importBtn.Name = "importBtn";
             this.importBtn.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.importBtn_Click);
